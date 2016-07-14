@@ -5,22 +5,6 @@ from random import choice
 from sys import argv
 
 
-def tweet(text):
-    """ Sends a tweet to Twitter using the Twitter API.
-
-    Returns None.
-    """
-
-    api = twitter.Api(
-        consumer_key=os.environ['TWITTER_CONSUMER_KEY'],
-        consumer_secret=os.environ['TWITTER_CONSUMER_SECRET'],
-        access_token_key=os.environ['TWITTER_ACCESS_TOKEN_KEY'],
-        access_token_secret=os.environ['TWITTER_ACCESS_TOKEN_SECRET'])
-
-    # send a tweet
-    status = api.PostUpdate(text)
-
-
 def open_and_read_file(file_path):
     """Takes file path as string; returns text as string.
 
@@ -68,13 +52,13 @@ def make_text(chains, n, hashtags):
     """
 
     # set starting values for variables
+    key = choose_random_start_key(chains)
     text = ""
     # This is a buffer variable.
     # We'll only add this if we get to a point where this ends
     # with valid sentence punctuation and doesn't cause 'text'
     # to be too long.
     text_since_punctuation = " ".join(key) + " "
-    key = choose_random_start_key(chains)
 
     # while the current key has a value associated with it
     while chains.get(key, False):
@@ -85,7 +69,7 @@ def make_text(chains, n, hashtags):
 
         # if the length of our current text plus the length of the pending text
         # and hashtags exceeds 140 characters, stop adding to the buffer.
-        if tweet_is_too_long(text, text_since_punctuation, hashtags) > 140:
+        if tweet_is_too_long(text, text_since_punctuation, hashtags):
             # add the hashtag once we've determined we're done adding
             # to our text
             text += hashtags
@@ -114,7 +98,7 @@ def choose_random_start_key(chains):
     """
 
     cap_keys = [key for key in chains.keys() if key[0] == key[0].capitalize()]
-    return choice(cap_keys))
+    return choice(cap_keys)
 
 
 def tweet_is_too_long(text, text_since_punctuation, hashtags):
@@ -137,7 +121,24 @@ def ends_with_punctuation(text):
     punctuation = ('.', '!', '?', '"', "'", "...", ",")
     return text.rstrip().endswith(punctuation)
 
-if __name__ == '__main':
+
+def tweet(text):
+    """ Sends a tweet to Twitter using the Twitter API.
+
+    Returns None.
+    """
+
+    api = twitter.Api(
+        consumer_key=os.environ['TWITTER_CONSUMER_KEY'],
+        consumer_secret=os.environ['TWITTER_CONSUMER_SECRET'],
+        access_token_key=os.environ['TWITTER_ACCESS_TOKEN_KEY'],
+        access_token_secret=os.environ['TWITTER_ACCESS_TOKEN_SECRET'])
+
+    # send a tweet
+    status = api.PostUpdate(text)
+
+
+if __name__ == '__main__':
     # set constants and grab arguments from command line
     HASHTAGS = '#hbgraceXV'
     input_path = argv[1]
@@ -155,7 +156,7 @@ if __name__ == '__main':
     # until the user chooses to quit
     while user_input != 'q' :
         # ask if they want to tweet again
-        user_input = raw_input('Press [Enter] to tweet. [q] to quit.')
+        user_input = raw_input('Press [Enter] to tweet. [q] to quit. ')
 
         # if they press anything other than Enter or q,
         # print an error.

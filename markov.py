@@ -76,7 +76,7 @@ def make_chains(text_string, n):
     return chains
 
 
-def make_text(chains, n):
+def make_text(chains, n, hashtags):
     """Takes dictionary of markov chains; returns random text."""
     
     cap_keys = [key for key in chains.keys() if key[0] == key[0].capitalize()]
@@ -89,15 +89,16 @@ def make_text(chains, n):
     #limiting output by character count if there's never an end to the string concatenation
     #could have user specify the default cut off value (characters)
     #setting cut off value to 140 to limit to Twitter allowable characters
-    while chains.get(key, False) and len(text) < 140:
+    while chains.get(key, False):
         # print text
         # print key
         next_word = choice(chains[key])
         text_since_punctuation += "{} ".format(next_word)
 
-        print "length is:", len(text)+len(text_since_punctuation)
-        #check if current string text is < 140 characters
-        if len(text)+len(text_since_punctuation) > 140:
+        # print "length is:", len(text)+len(text_since_punctuation)
+        # check if current string text is < 140 characters
+        if len(text)+len(text_since_punctuation)+len(hashtags) > 140:
+            text += hashtags
             break
         else:
             if text_since_punctuation.rstrip().endswith(('.', '!', '?', '"', "'", "...", ",")):
@@ -114,7 +115,7 @@ def make_text(chains, n):
 
     return text
 
-
+HASHTAGS = '#hbgraceXV'
 input_path = argv[1]
 n = int(argv[2])
 
@@ -125,8 +126,16 @@ input_text = open_and_read_file(input_path)
 chains = make_chains(input_text, n)
 # print 'chains made'
 # Produce random text
-random_text = make_text(chains, n)
+# random_text = make_text(chains, n, HASHTAGS)
 # print 'random_text made'
-print random_text
+# print random_text
+user_input = ''
 
-twitter_funct(random_text)
+while user_input != 'q' :
+    user_input = raw_input('Press [Enter] to tweet. [q] to quit.')
+
+    if user_input not in ['q', '']:
+        print "Please press [Enter] or [q]."
+    elif user_input == '':
+        random_text = make_text(chains, n, HASHTAGS)
+        twitter_funct(random_text)

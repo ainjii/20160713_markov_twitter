@@ -1,14 +1,15 @@
+import os
+import twitter
+
 from random import choice
 from sys import argv
-import os    #to access our OS environment variables
 
-import twitter #available on lab machines, otherwise pip install into active venv
 
-#Using python os.environ to get environtmental variables
-#
-# Note: you must run 'source secrets.sh' before running this file to set reqd env vars
+def tweet(text):
+    """ Sends a tweet to Twitter using the Twitter API.
 
-def twitter_funct(text):
+    Returns None.
+    """
 
     api = twitter.Api(
         consumer_key=os.environ['TWITTER_CONSUMER_KEY'],
@@ -16,14 +17,8 @@ def twitter_funct(text):
         access_token_key=os.environ['TWITTER_ACCESS_TOKEN_KEY'],
         access_token_secret=os.environ['TWITTER_ACCESS_TOKEN_SECRET'])
 
-    #print out credentials to ensure correct
-    print api.VerifyCredentials()
-
-    #send a tweet
+    # send a tweet
     status = api.PostUpdate(text)
-    print status.text
-
-    return None
 
 
 def open_and_read_file(file_path):
@@ -52,90 +47,121 @@ def make_chains(text_string, n):
     """
 
     chains = {}
-
     words = text_string.split()
 
-    
     # get keys for chains dictionary
     for i in range(len(words)-n):
 
         chains_key = tuple(words[i:i+n])
-        # chains = (words[i], words[i+1])
-
         chains_value = words[i+n]
 
-        # print chains_key
-        # print chains_value
-    
         chains[chains_key] = chains.get(chains_key, [])
-        # don't assign this to a value because .append returns none
         chains[chains_key].append(chains_value)
 
-        # print chains
-    
     return chains
 
 
 def make_text(chains, n, hashtags):
-    """Takes dictionary of markov chains; returns random text."""
-    
-    cap_keys = [key for key in chains.keys() if key[0] == key[0].capitalize()]
-    key = choice(cap_keys)
+    """Takes dictionary of markov chains.
 
-    
+    Returns semi-random text based on input string.
+    """
+
+    # set starting values for variables
     text = ""
+    # This is a buffer variable.
+    # We'll only add this if we get to a point where this ends
+    # with valid sentence punctuation and doesn't cause 'text'
+    # to be too long.
     text_since_punctuation = " ".join(key) + " "
+    key = choose_random_start_key(chains)
 
-    #limiting output by character count if there's never an end to the string concatenation
-    #could have user specify the default cut off value (characters)
-    #setting cut off value to 140 to limit to Twitter allowable characters
+    # while the current key has a value associated with it
     while chains.get(key, False):
-        # print text
-        # print key
+        # choose a random word from those available for the current key
+        # and add it to our buffer
         next_word = choice(chains[key])
         text_since_punctuation += "{} ".format(next_word)
 
-        # print "length is:", len(text)+len(text_since_punctuation)
-        # check if current string text is < 140 characters
-        if len(text)+len(text_since_punctuation)+len(hashtags) > 140:
+        # if the length of our current text plus the length of the pending text
+        # and hashtags exceeds 140 characters, stop adding to the buffer.
+        if tweet_is_too_long(text, text_since_punctuation, hashtags) > 140:
+            # add the hashtag once we've determined we're done adding
+            # to our text
             text += hashtags
+            # then exit the loop so we can finish the function
             break
         else:
-            if text_since_punctuation.rstrip().endswith(('.', '!', '?', '"', "'", "...", ",")):
+            # if the test buffer ends with punctuation after adding the
+            # new word, add it to text and clear the buffer
+            if ends_with_punctuation(text_since_punctuation):
                 text += text_since_punctuation
                 text_since_punctuation = ""
-            
-            # start range at 1 because don't need first element in key (already used)
-            key_list = [key[i] for i in range(1, len(key))]
+
+            # update the key for the next iteration
+            key_list = [item for i, item in enumerate(key) if i > 0]
             key_list.append(next_word)
-
             key = tuple(key_list)
-            # print key will print out the tuple of 3 elements
-
 
     return text
 
-HASHTAGS = '#hbgraceXV'
-input_path = argv[1]
-n = int(argv[2])
 
-# Open the file and turn it into one long string
-input_text = open_and_read_file(input_path)
-# print 'got input_text'
-# Get a Markov chain
-chains = make_chains(input_text, n)
-# print 'chains made'
-# Produce random text
-# random_text = make_text(chains, n, HASHTAGS)
-# print 'random_text made'
-# print random_text
-user_input = ''
+def choose_random_start_key(chains):
+    """ Chooses a starting key for a markov chain.
 
-while user_input != 'q' :
-    user_input = raw_input('Press [Enter] to tweet. [q] to quit.')
+    Returns a random key from the keys whose first element begins
+    with an uppercase letter.
+    """
 
-    if user_input not in ['q', '']:
-        print "Please press [Enter] or [q]."
-    elif user_input == '':
-        random_text = make_text(chains, n, HASHTAGS)
-        twitter_funct(random_text)
+    cap_keys = [key for key in chains.keys() if key[0] == key[0].capitalize()]
+    return choice(cap_keys))
+
+
+def tweet_is_too_long(text, text_since_punctuation, hashtags):
+    """ Determines whether the length of text would exceed 140
+    characters if the buffer and hashtags were added to it.
+
+    Returns a boolean.
+    """
+
+    return (len(text) + len(text_since_punctuation) + len(hashtags)) > 140
+
+
+def ends_with_punctuation(text):
+    """ Determines whether a string ends with valid sentence
+    punctuation.
+
+    Returns a boolean.
+    """
+
+    punctuation = ('.', '!', '?', '"', "'", "...", ",")
+    return text.rstrip().endswith(punctuation)
+
+if __name__ == '__main':
+    # set constants and grab arguments from command line
+    HASHTAGS = '#hbgraceXV'
+    input_path = argv[1]
+    n = int(argv[2])
+
+    # initialize variable for user_input
+    user_input = ''
+
+    # read input file as one long string
+    input_text = open_and_read_file(input_path)
+
+    # create a dictionary of n-grams
+    chains = make_chains(input_text, n)
+
+    # until the user chooses to quit
+    while user_input != 'q' :
+        # ask if they want to tweet again
+        user_input = raw_input('Press [Enter] to tweet. [q] to quit.')
+
+        # if they press anything other than Enter or q,
+        # print an error.
+        if user_input not in ['q', '']:
+            print "Please press [Enter] or [q]."
+        # if they press Enter, create and post another tweet
+        elif user_input == '':
+            random_text = make_text(chains, n, HASHTAGS)
+            tweet(random_text)

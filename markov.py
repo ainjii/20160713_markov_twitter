@@ -1,6 +1,7 @@
 import os
 import twitter
 
+from collections import defaultdict
 from random import choice
 from sys import argv
 
@@ -26,11 +27,11 @@ def make_chains(text_string, n):
 
     For example:
 
-        >>> make_chains("hi there mary hi there juanita")
+        >>> make_chains("hi there mary hi there juanita", 2)
         {('hi', 'there'): ['mary', 'juanita'], ('there', 'mary'): ['hi'], ('mary', 'hi': ['there']}
     """
 
-    chains = {}
+    chains = defaultdict(list)
     words = text_string.split()
 
     # get keys for chains dictionary
@@ -39,7 +40,6 @@ def make_chains(text_string, n):
         chains_key = tuple(words[i:i+n])
         chains_value = words[i+n]
 
-        chains[chains_key] = chains.get(chains_key, [])
         chains[chains_key].append(chains_value)
 
     return chains
@@ -118,7 +118,7 @@ def ends_with_punctuation(text):
     Returns a boolean.
     """
 
-    punctuation = ('.', '!', '?', '"', "'", "...", ",")
+    punctuation = ('.', '!', '?', '"', "'", "...")
     return text.rstrip().endswith(punctuation)
 
 
